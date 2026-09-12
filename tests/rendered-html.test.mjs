@@ -31,3 +31,20 @@ test("renders development preview metadata", async () => {
   );
   assert.match(await response.text(), developmentPreviewMeta);
 });
+
+test("renders a complete tour detail journey", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("detail-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const response = await worker.fetch(
+    new Request("http://localhost/tours/cruisers-skip-lines-on-time-return", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  for (const marker of ["tour-overview", "detail-inclusions", "meeting-section", "itinerary-section", "additional-section", "Reserve in 3 steps"]) {
+    assert.match(html, new RegExp(marker, "i"));
+  }
+});

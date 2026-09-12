@@ -16,12 +16,27 @@ export type Tour = {
   included: string[];
   notIncluded: readonly string[];
   prices: [string, string][];
+  groupType: string;
+  language: string;
+  ticketing: string;
+  pickupDetails: string;
+  cancellationPolicy: string;
+  additionalInfo: string[];
+  itinerary: ItineraryStop[];
 };
 
-type TourSeed = Omit<Tour, "number" | "story" | "included" | "notIncluded" | "prices"> & {
+export type ItineraryStop = {
+  name: string;
+  description: string;
+  duration: string;
+  admission: string;
+};
+
+type TourSeed = Omit<Tour, "number" | "story" | "included" | "notIncluded" | "prices" | "groupType" | "language" | "ticketing" | "pickupDetails" | "cancellationPolicy" | "additionalInfo" | "itinerary"> & {
   includedExtras?: string[];
   serviceIncluded?: string[];
   excluded?: readonly string[];
+  groupType?: string;
 };
 
 const groupLabels = ["2 guests", "3 guests", "4-6 guests", "7-9 guests", "10-12 guests", "13-15 guests"] as const;
@@ -35,6 +50,39 @@ function groupPrices(basePrice: number): [string, string][] {
   return [
     ...groupLabels.map((label, index) => [label, `$${roundToTen(basePrice * multipliers[index])}`] as [string, string]),
     ["16+ guests", "Request a quote"],
+  ];
+}
+
+const stopCatalog: Array<{ match: string; stop: ItineraryStop }> = [
+  { match: "Ephesus Ancient City", stop: { name: "Ephesus Ancient City", description: "Walk the marble streets from the civic quarter toward Curetes Street, the Library of Celsus and the Great Theatre as your guide brings Roman daily life into focus.", duration: "2 hours", admission: "Ticket required" } },
+  { match: "Upper Gate", stop: { name: "Ephesus Ancient City", description: "Enter through the Upper Gate and follow the ancient city's natural downhill route with your licensed guide.", duration: "2 hours", admission: "Ticket required" } },
+  { match: "Library of Celsus", stop: { name: "Library of Celsus", description: "Pause at Ephesus' celebrated restored facade and learn how the library, tomb and commercial agora shaped the heart of the city.", duration: "20 minutes", admission: "Included with Ephesus ticket" } },
+  { match: "Terrace Houses", stop: { name: "Terrace Houses", description: "Step inside the homes of wealthy Ephesians to see mosaics, frescoes, heating systems and domestic spaces preserved beneath a protective roof.", duration: "30 minutes", admission: "Separate ticket required" } },
+  { match: "House of the Virgin Mary", stop: { name: "House of the Virgin Mary", description: "Visit the peaceful pilgrimage sanctuary on Bulbul Mountain, with time for reflection at the chapel and wishing wall.", duration: "45 minutes", admission: "Ticket required" } },
+  { match: "Mary's House", stop: { name: "House of the Virgin Mary", description: "Visit the peaceful pilgrimage sanctuary on Bulbul Mountain, with time for reflection at the chapel and wishing wall.", duration: "45 minutes", admission: "Ticket required" } },
+  { match: "Temple of Artemis", stop: { name: "Temple of Artemis", description: "See the surviving remains of one of the Seven Wonders of the Ancient World and understand the scale of the sanctuary that once stood here.", duration: "15 minutes", admission: "Free admission" } },
+  { match: "Basilica of St. John", stop: { name: "Basilica of St. John", description: "Explore the hilltop basilica traditionally associated with St. John's burial place and take in views across Selcuk.", duration: "45 minutes", admission: "Ticket required" } },
+  { match: "Grand Theatre", stop: { name: "Great Theatre of Ephesus", description: "Stand inside the vast Roman theatre associated with the events of Acts 19 and the city's public life.", duration: "20 minutes", admission: "Included with Ephesus ticket" } },
+  { match: "Turkish lunch", stop: { name: "Traditional Turkish Lunch", description: "Pause for a relaxed set-menu meal featuring regional dishes. Dietary requirements can be shared during reservation.", duration: "1 hour", admission: "Included as listed" } },
+  { match: "wine tasting", stop: { name: "Aegean Wine Tasting", description: "Taste regional wines with local snacks while learning about the grapes and winemaking traditions of the Aegean.", duration: "1 hour", admission: "Included" } },
+  { match: "pottery class", stop: { name: "Hands-On Pottery Workshop", description: "Join a local master artisan at the wheel and create a piece while learning how traditional ceramics are formed.", duration: "45 minutes", admission: "Included" } },
+  { match: "Artisan workshops", stop: { name: "Local Artisan Workshop", description: "Choose a rug, ceramics or leather workshop. Watching is welcome and purchasing is never required.", duration: "45 minutes", admission: "Free admission" } },
+  { match: "Hagia Sophia", stop: { name: "Hagia Sophia", description: "Explore the layered Byzantine and Ottoman history of Istanbul's most celebrated monumental landmark.", duration: "1 hour", admission: "Ticket may be required" } },
+  { match: "Topkapi Palace", stop: { name: "Topkapi Palace", description: "Discover the ceremonial courts and collections of the Ottoman imperial residence with your private guide.", duration: "1.5 hours", admission: "Ticket required" } },
+  { match: "Blue Mosque", stop: { name: "Blue Mosque", description: "Visit Sultanahmet's active imperial mosque, subject to prayer times and appropriate dress requirements.", duration: "30 minutes", admission: "Free admission" } },
+  { match: "Roman Hippodrome", stop: { name: "Hippodrome of Constantinople", description: "Walk the former chariot-racing arena and examine its surviving monuments in the heart of the Old City.", duration: "30 minutes", admission: "Free admission" } },
+];
+
+function buildItinerary(seed: TourSeed): ItineraryStop[] {
+  const matched = stopCatalog
+    .filter(({ match }) => seed.highlights.some((highlight) => highlight.toLowerCase().includes(match.toLowerCase())))
+    .map(({ stop }) => stop)
+    .filter((stop, index, stops) => stops.findIndex(({ name }) => name === stop.name) === index)
+    .slice(0, 5);
+  return [
+    { name: "Meet your guide", description: `Your guide welcomes you at ${seed.origin} with a sign showing your name. The exact meeting time is confirmed around your ship or hotel schedule.`, duration: "10 minutes", admission: "No ticket required" },
+    ...matched,
+    { name: "Return to port or hotel", description: "Relax on the return drive. For cruise guests, a comfortable safety buffer is built in before the ship's all-aboard time.", duration: "20-75 minutes", admission: "Included" },
   ];
 }
 
@@ -58,6 +106,19 @@ function createTour(seed: TourSeed, index: number): Tour {
     included: [...extras, ...(seed.serviceIncluded ?? sharedIncluded)],
     notIncluded: resolvedExcluded,
     prices: groupPrices(seed.price),
+    groupType: seed.groupType ?? (seed.serviceIncluded ? "Small-group or private option" : "Private tour - only your party"),
+    language: "English",
+    ticketing: extrasText.includes("ticket") || extrasText.includes("admission") ? "Selected admission tickets included" : "Mobile confirmation - tickets arranged on request",
+    pickupDetails: `Meet beside the Information Desk at ${seed.origin}. For cruise arrivals, we normally recommend meeting 30-45 minutes after docking to avoid the largest crowds and afternoon heat. Your final meeting time and name-sign instructions are confirmed in writing.`,
+    cancellationPolicy: "Cancel at least 24 hours before the confirmed start time for a full refund. If your cruise ship cannot dock in port, cancellation is free of charge.",
+    additionalInfo: [
+      "Confirmation is sent after availability and ship timing are checked.",
+      "Strollers are welcome; Ephesus has uneven marble, slopes and steps.",
+      "Please share wheelchair or reduced-mobility needs before confirmation so the route and vehicle can be adapted.",
+      "Children must be accompanied by an adult; child seats can be requested in advance.",
+      "The order of stops may change with opening hours, weather, crowds and ship schedules.",
+    ],
+    itinerary: buildItinerary(seed),
   };
 }
 

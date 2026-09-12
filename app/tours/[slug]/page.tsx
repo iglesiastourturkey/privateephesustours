@@ -44,6 +44,12 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
       <div><Languages /><span><small>Language</small><b>{tour.language}</b></span></div>
     </section>
 
+    {tour.reviews.length > 0 && <section className="traveler-love">
+      <header><small>TRAVELER STORIES</small><h2>Why travelers<br /><em>loved this tour.</em></h2><p>Experiences shared by guests who joined this route.</p></header>
+      <div className="review-topic-list">{tour.reviewTopics.map((topic) => <span key={topic}>{topic}</span>)}</div>
+      <div className="tour-review-grid">{tour.reviews.map((review) => <blockquote key={`${review.name}-${review.month}`}><div>★★★★★</div><p>“{review.quote}”</p><footer><b>{review.name}</b><span>{review.month}</span></footer></blockquote>)}</div>
+    </section>}
+
     <section className="tour-overview detail-content-section">
       <header><small>OVERVIEW</small><h2>Everything you need<br /><em>before you choose.</em></h2></header>
       <div className="tour-overview-copy">
@@ -66,7 +72,7 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
     <section className="itinerary-section">
       <div className="itinerary-heading"><small>YOUR ITINERARY</small><h2>A clear route,<br /><em>flexible on the day.</em></h2><p>The order may be adjusted to avoid crowds and fit opening hours without removing confirmed inclusions.</p></div>
       <ol className="itinerary-list">
-        {tour.itinerary.map((stop, index) => <li key={`${stop.name}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{stop.name}</h3><p>{stop.description}</p><footer><b><Clock3 />{stop.duration}</b><b><CalendarCheck2 />{stop.admission}</b></footer></div></li>)}
+        {tour.itinerary.map((stop, index) => <li className={stop.isPassBy ? "pass-by" : ""} key={`${stop.name}-${index}`}><span>{stop.isPassBy ? "→" : String(index + 1).padStart(2, "0")}</span><div><h3>{stop.name}{stop.isPassBy ? " (Pass by)" : ""}</h3><p>{stop.description}</p><footer><b><Clock3 />{stop.duration}</b><b><CalendarCheck2 />{stop.admission}</b></footer></div></li>)}
       </ol>
     </section>
 

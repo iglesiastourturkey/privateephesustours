@@ -23,6 +23,8 @@ export type Tour = {
   cancellationPolicy: string;
   additionalInfo: string[];
   itinerary: ItineraryStop[];
+  reviewTopics: string[];
+  reviews: TravelerReview[];
 };
 
 export type ItineraryStop = {
@@ -30,13 +32,28 @@ export type ItineraryStop = {
   description: string;
   duration: string;
   admission: string;
+  isPassBy?: boolean;
 };
 
-type TourSeed = Omit<Tour, "number" | "story" | "included" | "notIncluded" | "prices" | "groupType" | "language" | "ticketing" | "pickupDetails" | "cancellationPolicy" | "additionalInfo" | "itinerary"> & {
+export type TravelerReview = {
+  name: string;
+  month: string;
+  quote: string;
+};
+
+type TourSeed = Omit<Tour, "number" | "story" | "included" | "notIncluded" | "prices" | "groupType" | "language" | "ticketing" | "pickupDetails" | "cancellationPolicy" | "additionalInfo" | "itinerary" | "reviewTopics" | "reviews"> & {
   includedExtras?: string[];
   serviceIncluded?: string[];
   excluded?: readonly string[];
   groupType?: string;
+  story?: string[];
+  itinerary?: ItineraryStop[];
+  pickupDetails?: string;
+  additionalInfo?: string[];
+  cancellationPolicy?: string;
+  ticketing?: string;
+  reviewTopics?: string[];
+  reviews?: TravelerReview[];
 };
 
 const groupLabels = ["2 guests", "3 guests", "4-6 guests", "7-9 guests", "10-12 guests", "13-15 guests"] as const;
@@ -99,7 +116,7 @@ function createTour(seed: TourSeed, index: number): Tour {
   return {
     ...seed,
     number: String(index + 1).padStart(2, "0"),
-    story: [
+    story: seed.story ?? [
       `Meet your licensed guide at ${seed.origin}. Travel in ${transportDescription} and explore at a pace shaped around your selected tour format rather than a large coach schedule.`,
       `The route brings together ${keyStops}. Your guide adjusts the order to site opening times, seasonal crowds and your ship's all-aboard time, while keeping every included stop clear before departure.`,
     ],
@@ -108,17 +125,19 @@ function createTour(seed: TourSeed, index: number): Tour {
     prices: groupPrices(seed.price),
     groupType: seed.groupType ?? (seed.serviceIncluded ? "Small-group or private option" : "Private tour - only your party"),
     language: "English",
-    ticketing: extrasText.includes("ticket") || extrasText.includes("admission") ? "Selected admission tickets included" : "Mobile confirmation - tickets arranged on request",
-    pickupDetails: `Meet beside the Information Desk at ${seed.origin}. For cruise arrivals, we normally recommend meeting 30-45 minutes after docking to avoid the largest crowds and afternoon heat. Your final meeting time and name-sign instructions are confirmed in writing.`,
-    cancellationPolicy: "Cancel at least 24 hours before the confirmed start time for a full refund. If your cruise ship cannot dock in port, cancellation is free of charge.",
-    additionalInfo: [
+    ticketing: seed.ticketing ?? (extrasText.includes("ticket") || extrasText.includes("admission") ? "Selected admission tickets included" : "Mobile confirmation - tickets arranged on request"),
+    pickupDetails: seed.pickupDetails ?? `Meet beside the Information Desk at ${seed.origin}. For cruise arrivals, we normally recommend meeting 30-45 minutes after docking to avoid the largest crowds and afternoon heat. Your final meeting time and name-sign instructions are confirmed in writing.`,
+    cancellationPolicy: seed.cancellationPolicy ?? "Cancel at least 24 hours before the confirmed start time for a full refund. If your cruise ship cannot dock in port, cancellation is free of charge.",
+    additionalInfo: seed.additionalInfo ?? [
       "Confirmation is sent after availability and ship timing are checked.",
       "Strollers are welcome; Ephesus has uneven marble, slopes and steps.",
       "Please share wheelchair or reduced-mobility needs before confirmation so the route and vehicle can be adapted.",
       "Children must be accompanied by an adult; child seats can be requested in advance.",
       "The order of stops may change with opening hours, weather, crowds and ship schedules.",
     ],
-    itinerary: buildItinerary(seed),
+    itinerary: seed.itinerary ?? buildItinerary(seed),
+    reviewTopics: seed.reviewTopics ?? [],
+    reviews: seed.reviews ?? [],
   };
 }
 
@@ -133,7 +152,40 @@ const seeds: TourSeed[] = [
     slug: "cruisers-skip-lines-on-time-return", badge: "Cruise favorite", shortTitle: "Skip-the-Line for Cruisers",
     title: "Private Ephesus for Cruisers - Skip the Lines & On-Time Return", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 180,
     image: "/images/ephesus-day.png", summary: "A flexible private shore excursion built around fast entry and a carefully protected return to your ship.",
-    highlights: ["Ephesus Ancient City", "Curetes Street", "Library of Celsus", "Private vehicle", "Written on-time return guarantee"], includedExtras: ["Skip-the-line tickets arranged on request"],
+    highlights: ["Walk the ancient streets of Ephesus", "Visit the House of the Virgin Mary", "See the Temple of Artemis ruins", "Private port pickup and drop-off", "Written on-time return guarantee"], includedExtras: ["Skip-the-line ticket arrangements for Ephesus"],
+    story: [
+      "Explore Ephesus on a private shore excursion with a professional local guide. Visit the UNESCO-listed Ancient City of Ephesus, the House of the Virgin Mary, the Temple of Artemis, the Library of Celsus, Roman Baths and more.",
+      "Port pickup, drop-off and a fully air-conditioned vehicle with a separate driver are included. You may add a local lunch or the Terrace Houses to the day; any optional attraction fees are confirmed before booking.",
+    ],
+    pickupDetails: "For cruise guests, meet at the port about 30 to 45 minutes after your ship docks. An early meeting helps avoid crowds, school buses and the strongest afternoon heat. If your ship is scheduled at 07:00, we recommend an 08:00 meeting; for later arrivals, meet about 30 minutes after docking.",
+    ticketing: "Ephesus tickets can be arranged in advance to avoid the long ticket line; Terrace Houses and other optional entries are confirmed separately.",
+    additionalInfo: [
+      "Confirmation is sent at the time of booking once the port schedule is checked.",
+      "The route is suitable for most travelers; please tell us in advance about wheelchair, stroller or reduced-mobility requirements.",
+      "This cruise-specific tour is offered in English and is designed around the ship's all-aboard time.",
+      "Meet 30 to 45 minutes after docking to help avoid crowds and the hottest part of the day.",
+      "We guarantee an on-time return to your ship and this is a private activity for your own group.",
+    ],
+    cancellationPolicy: "You can cancel up to 24 hours before the confirmed experience start time for a full refund. If your ship does not dock in Kusadasi, cancellation is free of charge.",
+    itinerary: [
+      { name: "Kusadasi Cruise Port Meeting", description: "Your guide meets you at the cruise port with a name sign and walks you to the waiting vehicle.", duration: "10 minutes", admission: "Free admission" },
+      { name: "Ephesus Terrace Houses (optional)", description: "Add the residences of Ephesus' upper-class families, known for their mosaics, frescoes and wall paintings, to your program.", duration: "30 minutes", admission: "Ticket not included" },
+      { name: "House of the Virgin Mary", description: "Visit one of Christianity's important pilgrimage places on Bulbul Mountain, traditionally associated with the final years of the Virgin Mary.", duration: "45 minutes", admission: "Ticket not included" },
+      { name: "Ephesus Ancient City", description: "Explore one of the best-preserved Greco-Roman cities in the world, including the Odeon, Domitian Temple, Curetes Street, Celsus Library, Roman Baths and Great Theatre.", duration: "2 hours", admission: "Ticket not included" },
+      { name: "Temple of Artemis", description: "See the remains of one of the Seven Wonders of the Ancient World.", duration: "15 minutes", admission: "Free admission" },
+      { name: "Kusadasi Castle / Pigeon Island", description: "Pass by the waterfront landmark beside the port; you may visit independently after the tour if time allows.", duration: "Pass by", admission: "Free admission", isPassBy: true },
+      { name: "Kusadasi Shopping District", description: "Pass by the central shopping area near the port. Your guide can point it out for free time after the tour.", duration: "Pass by", admission: "Free admission", isPassBy: true },
+      { name: "Okuz Mehmet Pasa Caravanserai", description: "Pass by the historic caravanserai close to the cruise port.", duration: "Pass by", admission: "Free admission", isPassBy: true },
+      { name: "Kusadasi Return", description: "Return to the port with time built in before your ship's all-aboard time.", duration: "10 minutes", admission: "Included" },
+    ],
+    reviewTopics: ["Great food", "Excellent organisation", "Clear communication", "Pickup experience", "Family fun", "Great guides"],
+    reviews: [
+      { name: "Jill W.", month: "Jun 2026", quote: "We experienced an incredible tour in Turkey, from ancient ruins to the House of the Virgin Mary. Furkan was knowledgeable, fun and professional; we all learned so much." },
+      { name: "Gregory O.", month: "Sep 2026", quote: "Our private tour was fantastic: on time, knowledgeable and tailored to our tastes. The House of the Virgin Mary, Ephesus and Artemis made it memorable." },
+      { name: "George L.", month: "Jul 2026", quote: "A fun half day in Kusadasi with a great guide. We experienced local culture, rug making, traditional delicacies and memorable photo stops." },
+      { name: "Marion B.", month: "Aug 2026", quote: "A great tour with a very nice air-conditioned Mercedes. Our guide was knowledgeable and friendly, and the House of Mary plus Ephesus were excellent." },
+      { name: "Priyanka H.", month: "Jul 2026", quote: "A personalized tour for adults and children alike. We enjoyed Ephesus, the House of the Virgin Mary, pottery and seeing how rugs are made." },
+    ],
   },
   {
     slug: "private-ephesus-cruisers-skip-line", badge: "Private tour", shortTitle: "Ephesus Port Essential",

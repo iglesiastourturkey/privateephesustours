@@ -44,7 +44,7 @@ test("renders a complete tour detail journey", async () => {
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  for (const marker of ["tour-overview", "detail-inclusions", "meeting-section", "itinerary-section", "additional-section", "Reserve in 3 steps"]) {
+  for (const marker of ["tour-overview", "traveler-love", "detail-inclusions", "meeting-section", "itinerary-section", "Ephesus Terrace Houses", "Kusadasi Castle", "additional-section", "Reserve in 3 steps"]) {
     assert.match(html, new RegExp(marker, "i"));
   }
 });

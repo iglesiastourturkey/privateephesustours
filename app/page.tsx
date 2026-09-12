@@ -47,10 +47,10 @@ export default function Home() {
       </section>
 
       <section className="tour-index" id="tours">
-        <div className="chapter-title light-title"><span>03 / ALL EXPERIENCES</span><h2>Ten distinct ways<br />to <em>meet history.</em></h2><p>Every experience from the current collection is here—with its own route, pricing and detail page.</p></div>
+        <div className="chapter-title light-title"><span>03 / FEATURED EXPERIENCES</span><h2>Every way into<br /><em>Ephesus.</em></h2><p>Start with six popular choices, or compare all 24 requested routes plus our five original specialty experiences.</p></div>
         <div className="featured-tours">{tours.slice(0, 3).map((tour, index) => <TourCard tour={tour} featured={index === 0} key={tour.slug} />)}</div>
-        <div className="tour-grid">{tours.slice(3).map((tour) => <TourCard tour={tour} key={tour.slug} />)}</div>
-        <a className="text-link-light" href="/tours">Compare all ten tours <ArrowRight /></a>
+        <div className="tour-grid">{tours.slice(3, 6).map((tour) => <TourCard tour={tour} key={tour.slug} />)}</div>
+        <a className="text-link-light" href="/tours">Compare all 29 tours <ArrowRight /></a>
       </section>
 
       <section className="about-chapter" id="about">

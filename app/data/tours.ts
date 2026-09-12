@@ -1,75 +1,258 @@
 import { notIncluded, sharedIncluded } from "../content";
 
 export type Tour = {
-  slug: string; number: string; badge: string; title: string; shortTitle: string;
-  duration: string; origin: string; price: number; image: string; summary: string;
-  story: string[]; highlights: string[]; included: string[];
-  notIncluded: readonly string[]; prices: [string, string][];
+  slug: string;
+  number: string;
+  badge: string;
+  title: string;
+  shortTitle: string;
+  duration: string;
+  origin: string;
+  price: number;
+  image: string;
+  summary: string;
+  story: string[];
+  highlights: string[];
+  included: string[];
+  notIncluded: readonly string[];
+  prices: [string, string][];
 };
 
-const standardPrices: [string, string][] = [["2 guests", "$180"], ["3 guests", "$220"], ["4–6 guests", "$250"], ["7–9 guests", "$280"], ["10–12 guests", "$300"], ["13–15 guests", "$350"], ["16+ guests", "Request a quote"]];
+type TourSeed = Omit<Tour, "number" | "story" | "included" | "notIncluded" | "prices"> & {
+  includedExtras?: string[];
+  serviceIncluded?: string[];
+  excluded?: readonly string[];
+};
 
-export const tours: Tour[] = [
+const groupLabels = ["2 guests", "3 guests", "4-6 guests", "7-9 guests", "10-12 guests", "13-15 guests"] as const;
+const multipliers = [1, 1.22, 1.4, 1.56, 1.72, 1.94] as const;
+
+function roundToTen(value: number) {
+  return Math.ceil(value / 10) * 10;
+}
+
+function groupPrices(basePrice: number): [string, string][] {
+  return [
+    ...groupLabels.map((label, index) => [label, `$${roundToTen(basePrice * multipliers[index])}`] as [string, string]),
+    ["16+ guests", "Request a quote"],
+  ];
+}
+
+function createTour(seed: TourSeed, index: number): Tour {
+  const keyStops = seed.highlights.slice(0, 3).join(", ");
+  const extras = seed.includedExtras ?? [];
+  const extrasText = extras.join(" ").toLowerCase();
+  const transportDescription = seed.serviceIncluded ? "an air-conditioned vehicle" : "a private, air-conditioned vehicle";
+  const resolvedExcluded = (seed.excluded ?? notIncluded).filter((item) => {
+    if (item.startsWith("Entrance tickets") && (extrasText.includes("ticket") || extrasText.includes("admission"))) return false;
+    if (item.startsWith("Lunch") && extrasText.includes("lunch")) return false;
+    return true;
+  });
+  return {
+    ...seed,
+    number: String(index + 1).padStart(2, "0"),
+    story: [
+      `Meet your licensed guide at ${seed.origin}. Travel in ${transportDescription} and explore at a pace shaped around your selected tour format rather than a large coach schedule.`,
+      `The route brings together ${keyStops}. Your guide adjusts the order to site opening times, seasonal crowds and your ship's all-aboard time, while keeping every included stop clear before departure.`,
+    ],
+    included: [...extras, ...(seed.serviceIncluded ?? sharedIncluded)],
+    notIncluded: resolvedExcluded,
+    prices: groupPrices(seed.price),
+  };
+}
+
+const seeds: TourSeed[] = [
   {
-    slug: "private-ephesus-tour-skip-the-line", number: "01", badge: "Best seller", shortTitle: "Ephesus Essentials", title: "Private Ephesus Tour — Skip-the-Line & On-Time Return", duration: "4–5 hours", origin: "Kusadasi Cruise Port", price: 180, image: "/images/ephesus-private-hero-v2.webp",
-    summary: "Ephesus, the Terrace Houses and the Basilica of St. John with your own licensed guide—and a guaranteed on-time return.",
-    story: ["Your private guide meets you at the Kusadasi port exit. Twenty minutes later, you are walking the original marble streets of one of the world’s best-preserved Greco-Roman cities.", "Explore the Library of Celsus, Grand Theatre and remarkable Terrace Houses before continuing to the Basilica of St. John and the Temple of Artemis. The pace, questions and stops remain entirely yours."],
-    highlights: ["Ephesus Ancient City & Terrace Houses", "Basilica of St. John", "Temple of Artemis photo stop", "Skip-the-line tickets available", "Written on-time return guarantee"], included: ["Skip-the-line tickets arranged on request", ...sharedIncluded], notIncluded, prices: standardPrices,
+    slug: "all-inclusive-ephesus-skip-line", badge: "Best seller", shortTitle: "All-Inclusive Ephesus",
+    title: "All-Inclusive Ephesus Tour with Skip-the-Line Entry", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 250,
+    image: "/images/ephesus-private-hero-v2.webp", summary: "Private Ephesus sightseeing with pre-arranged admission, a licensed guide and ship-timed port transfers.",
+    highlights: ["Ephesus Ancient City", "Library of Celsus", "Grand Theatre", "Temple of Artemis", "On-time ship return"], includedExtras: ["Pre-arranged Ephesus entry ticket", "Skip-the-ticket-line coordination"],
   },
   {
-    slug: "no-shopping-ephesus-tour", number: "02", badge: "No shopping", shortTitle: "Nothing but Ephesus", title: "No-Shopping Ephesus Tour — 100% Sightseeing", duration: "5–6 hours", origin: "Kusadasi Cruise Port", price: 360, image: "/images/ephesus-detail-10.webp",
-    summary: "Zero showrooms and zero sales pressure. Every minute ashore belongs to the ancient sites and your questions.",
-    story: ["Many low-priced shore excursions make their margin through showroom commissions. This experience is designed for travelers who want none of that—and the no-shopping promise appears in writing.", "Spend the time you save at Ephesus, the Terrace Houses and either the House of the Virgin Mary or Basilica of St. John. It is pure history, privately experienced."],
-    highlights: ["Written zero-shopping guarantee", "Ephesus & Terrace Houses", "Virgin Mary or St. John—your choice", "Extra time at the ruins", "On-time return to ship"], included: ["Commission-free, no-shopping itinerary", ...sharedIncluded], notIncluded, prices: [["2 guests", "$360"], ["3 guests", "$440"], ["4–6 guests", "$500"], ["7–9 guests", "$560"], ["10–12 guests", "$600"], ["13–15 guests", "$700"], ["16+ guests", "Request a quote"]],
+    slug: "cruisers-skip-lines-on-time-return", badge: "Cruise favorite", shortTitle: "Skip-the-Line for Cruisers",
+    title: "Private Ephesus for Cruisers - Skip the Lines & On-Time Return", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-day.png", summary: "A flexible private shore excursion built around fast entry and a carefully protected return to your ship.",
+    highlights: ["Ephesus Ancient City", "Curetes Street", "Library of Celsus", "Private vehicle", "Written on-time return guarantee"], includedExtras: ["Skip-the-line tickets arranged on request"],
   },
   {
-    slug: "best-of-ephesus-private-tour", number: "03", badge: "Most complete", shortTitle: "The Complete Ephesus", title: "Best of Ephesus — with House of the Virgin Mary", duration: "5–6 hours", origin: "Kusadasi Cruise Port", price: 180, image: "/images/ephesus-biblical-v2.webp",
-    summary: "The ancient city, Terrace Houses and the House of the Virgin Mary in one beautifully timed private day.",
-    story: ["Our most complete Ephesus shore excursion is ideal for a first visit. Walk the city’s full ceremonial route from the Odeon to the Library of Celsus and the Grand Theatre.", "Then climb Bülbül Mountain to the peaceful House of the Virgin Mary before a Temple of Artemis photo stop and panoramic return through Kusadasi."],
-    highlights: ["Full Ephesus route", "Terrace Houses", "House of the Virgin Mary", "Temple of Artemis", "Optional local lunch"], included: ["House of the Virgin Mary on the route", ...sharedIncluded], notIncluded, prices: standardPrices,
+    slug: "private-ephesus-cruisers-skip-line", badge: "Private tour", shortTitle: "Ephesus Port Essential",
+    title: "Private Ephesus Tour for Cruisers - On-Time Return & Skip-Line", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-celsus.webp", summary: "The essential Ephesus monuments with your own guide, private transport and no waiting for a large group.",
+    highlights: ["Upper Gate to Lower Gate route", "Library of Celsus", "Grand Theatre", "Temple of Hadrian", "Ship-safe timing"], includedExtras: ["Skip-the-line tickets arranged on request"],
   },
   {
-    slug: "biblical-ephesus-private-tour", number: "04", badge: "Pilgrimage", shortTitle: "Biblical Ephesus", title: "Biblical Ephesus — Footsteps of St. Paul & St. John", duration: "5–6 hours", origin: "Kusadasi Cruise Port", price: 200, image: "/images/ephesus-biblical-v2.webp",
-    summary: "A contemplative journey through the landscape of St. Paul, St. John and the Virgin Mary.",
-    story: ["Ephesus was home to St. Paul, one of the Seven Churches of Revelation and central to the story of St. John and the Virgin Mary. Your guide connects that history to the places beneath your feet.", "Visit the House of the Virgin Mary, the Grand Theatre described in Acts 19 and the Basilica of St. John. Time for prayer, reflection and questions is always respected."],
-    highlights: ["House of the Virgin Mary", "Basilica of St. John", "Grand Theatre—Acts 19", "Biblical-history specialist guide", "Gentle, reflective pace"], included: ["Faith-focused guide and route", ...sharedIncluded], notIncluded, prices: [["2 guests", "$200"], ["3 guests", "$240"], ["4–6 guests", "$270"], ["7–9 guests", "$300"], ["10–12 guests", "$350"], ["13–15 guests", "$400"], ["16+ guests", "Request a quote"]],
+    slug: "all-included-ephesus-cruisers-tickets", badge: "Tickets included", shortTitle: "Ephesus Complete Package",
+    title: "All-Included Ephesus Tour for Cruisers with Entry Tickets", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 260,
+    image: "/images/ephesus-detail-2.webp", summary: "A simple, clearly packaged port day with private guiding, transport and Ephesus admission included.",
+    highlights: ["Ephesus admission", "Library of Celsus", "Hadrian's Temple", "Grand Theatre", "Private port transfers"], includedExtras: ["Ephesus Ancient City entry ticket", "Ticket-line coordination"],
   },
   {
-    slug: "ephesus-wine-tasting-private-tour", number: "05", badge: "Food & wine", shortTitle: "History & Aegean Wine", title: "Ephesus & Wine Tasting with Local Snacks", duration: "5–6 hours", origin: "Kusadasi Cruise Port", price: 250, image: "/images/ephesus-wine-v2.webp",
-    summary: "Two thousand years of history followed by regional wines, local flavors and Aegean hospitality.",
-    story: ["Begin with the Library of Celsus, Grand Theatre and Curetes Street. Then exchange ancient marble for a family winery and the living culture of the Aegean.", "Taste regional wines with local snacks as your host explains the grapes and terroir. A panoramic Kusadasi drive completes the day."],
-    highlights: ["Private guided Ephesus walk", "Regional wine tasting", "Local snacks", "Local art gallery", "Panoramic Kusadasi drive"], included: ["Wine tasting with local snacks", ...sharedIncluded], notIncluded, prices: [["2 guests", "$250"], ["3 guests", "$280"], ["4–6 guests", "$300"], ["7–9 guests", "$320"], ["10–12 guests", "$350"], ["13–15 guests", "$450"], ["16+ guests", "Request a quote"]],
+    slug: "private-biblical-ephesus-lunch", badge: "Biblical heritage", shortTitle: "Biblical Ephesus & Lunch",
+    title: "Private Biblical Ephesus Tour from Kusadasi Port with Lunch", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 250,
+    image: "/images/ephesus-biblical-v2.webp", summary: "Follow the stories of St. Paul and St. John through Ephesus, then enjoy a relaxed Turkish lunch.",
+    highlights: ["Grand Theatre and Acts 19", "Basilica of St. John", "Library of Celsus", "Biblical-history guide", "Turkish lunch"], includedExtras: ["Faith-focused route", "Set-menu Turkish lunch"],
   },
   {
-    slug: "ephesus-and-shopping-private-tour", number: "06", badge: "Culture & crafts", shortTitle: "Ephesus & Artisans", title: "Ephesus & Turkish Handicrafts — Rugs, Ceramics, Leather", duration: "4–5 hours", origin: "Kusadasi Cruise Port", price: 180, image: "/images/ephesus-crafts-v2.webp",
-    summary: "Ancient Ephesus followed by the region’s living traditions of weaving, ceramics and leather craft.",
-    story: ["History comes first with a full guided visit of Ephesus and the Terrace Houses, timed to avoid the largest groups.", "Then choose the crafts that interest you: watch a rug take shape, see ceramics painted by hand or discover Aegean leather. Watching is welcome; purchasing is never required."],
-    highlights: ["Ephesus & Terrace Houses", "Artisan workshops", "Rugs, ceramics or leather", "No obligation to purchase", "On-time ship return"], included: ["Your choice of artisan workshop visits", ...sharedIncluded], notIncluded, prices: standardPrices,
+    slug: "private-ephesus-cruisers-tickets-included", badge: "Easy planning", shortTitle: "Ephesus with Tickets",
+    title: "Private Ephesus Tour for Cruisers with Skip-the-Line Tickets", duration: "3-4 hours", origin: "Kusadasi Cruise Port", price: 240,
+    image: "/images/ephesus-detail-4.webp", summary: "A compact private tour for shorter calls, with Ephesus admission handled before you arrive.",
+    highlights: ["Ephesus Ancient City", "Library of Celsus", "Grand Theatre", "Short-call friendly", "Pre-arranged admission"], includedExtras: ["Ephesus Ancient City entry ticket", "Skip-the-ticket-line coordination"],
   },
   {
-    slug: "ephesus-pottery-class-private-tour", number: "07", badge: "Family favorite", shortTitle: "Ephesus & Pottery", title: "Ephesus & Hands-On Pottery Class", duration: "4–5 hours", origin: "Kusadasi Cruise Port", price: 180, image: "/images/ephesus-pottery-v2.webp",
-    summary: "Explore Ephesus, then shape your own pottery with a master artisan—a tactile day for every generation.",
-    story: ["The morning belongs to Ephesus: explore its library, theatre and marble streets at your own family’s pace.", "At a traditional workshop, a master artisan welcomes you with tea or coffee and guides you at the wheel. The class is included and the day is designed for a relaxed amount of walking."],
-    highlights: ["Guided Ephesus visit", "Hands-on pottery class", "Master artisan", "Coffee or tea welcome", "Ideal for families"], included: ["Pottery class with a master artisan", "Welcome coffee, tea or water", ...sharedIncluded], notIncluded, prices: standardPrices,
+    slug: "private-all-inclusive-ephesus", badge: "Most complete", shortTitle: "Private Ephesus All-Inclusive",
+    title: "Private All-Inclusive Ephesus Tour - Skip-the-Line", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 290,
+    image: "/images/ephesus-private-hero-v2.webp", summary: "Private transport, expert guiding, admission and lunch combined in one complete Ephesus day.",
+    highlights: ["Ephesus Ancient City", "Terrace Houses", "Temple of Artemis", "Local lunch", "Skip-the-line entry"], includedExtras: ["Ephesus and Terrace Houses tickets", "Set-menu Turkish lunch"],
   },
   {
-    slug: "half-day-private-ephesus-tour", number: "08", badge: "Short & easy", shortTitle: "Half-Day Ephesus", title: "Half-Day Private Ephesus Tour", duration: "3–4 hours", origin: "Kusadasi Cruise Port", price: 170, image: "/images/ephesus-detail-4.webp",
-    summary: "The essential city and Terrace Houses for a short port call, with time left to enjoy Kusadasi.",
-    story: ["Twenty minutes after meeting your guide at the port you arrive at Ephesus. In around two hours on site, cover Curetes Street, Celsus, the Grand Theatre and the Terrace Houses.", "Return within three to four hours, leaving space for Kusadasi’s waterfront, bazaar or Pigeon Island before sailing."],
-    highlights: ["Essential Ephesus highlights", "Terrace Houses", "Only 20 minutes from port", "Ideal for short calls", "Kusadasi free time afterwards"], included: sharedIncluded, notIncluded, prices: [["2 guests", "$170"], ["3 guests", "$210"], ["4–6 guests", "$240"], ["7–9 guests", "$270"], ["10–12 guests", "$290"], ["13–15 guests", "$340"], ["16+ guests", "Request a quote"]],
+    slug: "ephesus-small-group-semi-private", badge: "Small group", shortTitle: "Semi-Private Ephesus",
+    title: "Ephesus Small-Group Semi-Private Shore Excursion", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 90,
+    image: "/images/ephesus-detail-10.webp", summary: "A sociable, lower-cost shore excursion with a deliberately small group and clear port timing.",
+    highlights: ["Small-group format", "Ephesus Ancient City", "Library of Celsus", "Professional guide", "On-time port return"], includedExtras: ["Small-group guided experience"],
+    serviceIncluded: ["Licensed professional tour guide", "Small-group transport by air-conditioned vehicle", "Port pick-up and drop-off", "Planned on-time return to your ship", "All local taxes, parking fees and fuel"],
   },
   {
-    slug: "istanbul-old-city-private-tour-galataport", number: "09", badge: "Istanbul", shortTitle: "Istanbul Old City", title: "Private Istanbul Old City Tour — From Galataport", duration: "6–7 hours", origin: "Galataport, Istanbul", price: 400, image: "/images/istanbul-private-v2.webp",
-    summary: "Hagia Sophia, Topkapi Palace, Blue Mosque and Hippodrome with a private licensed guide.",
-    story: ["Meet at the Galataport exit, then cross the Golden Horn to Sultanahmet as your guide begins the story of a capital shaped by two empires.", "Explore Hagia Sophia, Topkapi Palace, the Blue Mosque and Roman Hippodrome in an order adapted to opening times, your interests and your ship."],
-    highlights: ["Hagia Sophia", "Topkapi Palace", "Blue Mosque", "Roman Hippodrome", "Galataport meet & return"], included: ["Sultanahmet walking tour and tram experience", ...sharedIncluded], notIncluded, prices: [["2 guests", "$400"], ["3 guests", "$440"], ["4–6 guests", "$500"], ["7–9 guests", "$560"], ["10–12 guests", "$620"], ["13–15 guests", "$700"], ["16+ guests", "Request a quote"]],
+    slug: "ephesus-kusadasi-on-time-guarantee", badge: "Ship-safe", shortTitle: "Ephesus Return Guarantee",
+    title: "Ephesus Tour from Kusadasi with On-Time Return Guarantee", duration: "5-7 hours", origin: "Kusadasi Cruise Port", price: 190,
+    image: "/images/ephesus-day.png", summary: "A fuller shore day with live schedule awareness and a written commitment to return before all-aboard.",
+    highlights: ["Ephesus Ancient City", "Terrace Houses", "House of the Virgin Mary", "Temple of Artemis", "Return-time guarantee"], includedExtras: ["Live ship schedule monitoring"],
   },
   {
-    slug: "ephesus-tour-from-izmir-port", number: "10", badge: "From Izmir", shortTitle: "Ephesus from Izmir", title: "Private Ephesus Tour from Izmir Port", duration: "6–7 hours", origin: "Izmir Cruise Port or hotel", price: 280, image: "/images/ephesus-detail-2.webp",
-    summary: "A comfortable private route from Izmir to Ephesus, Artemis and a traditional rug-weaving demonstration.",
-    story: ["Your guide and driver meet you at Izmir port or hotel. After a comfortable one-hour drive, explore Celsus, Curetes Street, Hadrian’s Temple and the Grand Theatre.", "Continue to the Temple of Artemis and a local carpet cooperative before returning to Izmir with ship timing monitored throughout."],
-    highlights: ["Ephesus with licensed guide", "Temple of Artemis", "Rug-weaving demonstration", "Izmir round-trip transfer", "On-time ship return"], included: ["Traditional rug-weaving demonstration", "Izmir–Ephesus round-trip transfer", ...sharedIncluded], notIncluded, prices: [["2 guests", "$280"], ["3 guests", "$320"], ["4–6 guests", "$360"], ["7–9 guests", "$400"], ["10–12 guests", "$440"], ["13–15 guests", "$500"], ["16+ guests", "Request a quote"]],
+    slug: "private-ephesus-ticket-included", badge: "Admission included", shortTitle: "Ephesus Ticket Included",
+    title: "Private Ephesus Tour for Cruisers with Ephesus Ticket Included", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 240,
+    image: "/images/ephesus-celsus.webp", summary: "A private Ephesus experience with admission included and every stop paced for your own party.",
+    highlights: ["Ephesus entry ticket", "Curetes Street", "Library of Celsus", "Grand Theatre", "Private guide and vehicle"], includedExtras: ["Ephesus Ancient City entry ticket"],
+  },
+  {
+    slug: "ephesus-marys-house-skip-line", badge: "Sacred sites", shortTitle: "Ephesus & Mary's House",
+    title: "Skip-the-Line Ephesus & House of the Virgin Mary Tour", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 200,
+    image: "/images/ephesus-biblical-v2.webp", summary: "Pair the monumental streets of Ephesus with the quiet sanctuary on Bulbul Mountain.",
+    highlights: ["Ephesus Ancient City", "House of the Virgin Mary", "Library of Celsus", "Temple of Artemis", "Flexible private pace"], includedExtras: ["Skip-the-line tickets arranged on request"],
+  },
+  {
+    slug: "ephesus-virgin-mary-ticket-lunch", badge: "Tickets & lunch", shortTitle: "Ephesus, Mary & Lunch",
+    title: "Ephesus & Virgin Mary Tour with Entry Tickets and Lunch", duration: "6-7 hours", origin: "Kusadasi Cruise Port", price: 320,
+    image: "/images/ephesus-biblical-v2.webp", summary: "A complete private day covering Ephesus and Mary's House, with admission and Turkish lunch included.",
+    highlights: ["Ephesus Ancient City", "House of the Virgin Mary", "Temple of Artemis", "All entry tickets", "Turkish lunch"], includedExtras: ["Ephesus and Mary's House entry tickets", "Set-menu Turkish lunch"],
+  },
+  {
+    slug: "ephesus-house-virgin-mary-cruisers", badge: "Guest favorite", shortTitle: "Ephesus & Virgin Mary",
+    title: "Ephesus and House of the Virgin Mary Tour for Cruisers", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 190,
+    image: "/images/ephesus-detail-6.webp", summary: "The two essential Ephesus-area landmarks in a private route coordinated around your ship.",
+    highlights: ["Ephesus Ancient City", "House of the Virgin Mary", "Library of Celsus", "Temple of Artemis", "Port meet and return"],
+  },
+  {
+    slug: "private-ephesus-optional-tickets", badge: "Flexible choice", shortTitle: "Ephesus Your Way",
+    title: "Skip-the-Line Private Ephesus Tour with Optional Tickets", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 170,
+    image: "/images/ephesus-private-hero-v2.webp", summary: "Choose the core private tour, then add Ephesus and Terrace Houses admission to match your interests.",
+    highlights: ["Customizable itinerary", "Ephesus Ancient City", "Optional Terrace Houses", "No compulsory extras", "Ship-safe timing"], includedExtras: ["Optional tickets arranged at official prices"],
+  },
+  {
+    slug: "artemis-marys-house-half-day", badge: "Half day", shortTitle: "Artemis & Mary's House",
+    title: "Temple of Artemis & House of the Virgin Mary Private Half-Day Tour", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-detail-4.webp", summary: "A gentler private half day linking one of the Seven Wonders with the region's peaceful pilgrimage site.",
+    highlights: ["Temple of Artemis", "House of the Virgin Mary", "Ephesus panorama", "Reduced walking option", "Private vehicle"],
+  },
+  {
+    slug: "all-inclusive-ephesus-mary-turkish-lunch", badge: "All-inclusive", shortTitle: "Ephesus, Mary & Turkish Lunch",
+    title: "All-Inclusive Private Ephesus, House of Mary & Turkish Lunch", duration: "5-6 hours", origin: "Kusadasi Cruise Port", price: 320,
+    image: "/images/ephesus-day.png", summary: "A seamless private day with the major sites, all admissions and a traditional local meal included.",
+    highlights: ["Ephesus Ancient City", "House of the Virgin Mary", "Terrace Houses", "Temple of Artemis", "Turkish lunch"], includedExtras: ["All listed attraction tickets", "Set-menu Turkish lunch"],
+  },
+  {
+    slug: "private-ephesus-guaranteed-return", badge: "Guaranteed return", shortTitle: "Private Ship-Safe Ephesus",
+    title: "Private Ephesus Tour with Guaranteed On-Time Return", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-celsus.webp", summary: "Private guiding and transport with the day's timing engineered backwards from your all-aboard time.",
+    highlights: ["Written return guarantee", "Live ship monitoring", "Ephesus Ancient City", "Flexible route", "Private port transfers"], includedExtras: ["Live ship schedule monitoring"],
+  },
+  {
+    slug: "marys-house-ephesus-private", badge: "Private pilgrimage", shortTitle: "Mary's House & Ephesus",
+    title: "Private Tour for Cruisers - Mary's House and Ephesus", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 200,
+    image: "/images/ephesus-biblical-v2.webp", summary: "A contemplative visit to Mary's House followed by a privately guided walk through Ephesus.",
+    highlights: ["House of the Virgin Mary", "Ephesus Ancient City", "Grand Theatre", "Time for reflection", "Private pace"],
+  },
+  {
+    slug: "ephesus-virgin-mary-izmir-all-inclusive", badge: "From Izmir", shortTitle: "Ephesus & Mary from Izmir",
+    title: "All-Inclusive Ephesus & Virgin Mary Tour from Izmir", duration: "6-10 hours", origin: "Izmir Cruise Port or hotel", price: 390,
+    image: "/images/ephesus-detail-2.webp", summary: "A comfortable full-day private route from Izmir with admissions, lunch and return transport included.",
+    highlights: ["Izmir round-trip transfer", "Ephesus Ancient City", "House of the Virgin Mary", "All entry tickets", "Turkish lunch"], includedExtras: ["All listed attraction tickets", "Set-menu Turkish lunch", "Izmir-Ephesus round-trip transfer"],
+  },
+  {
+    slug: "ephesus-artemis-kusadasi-private", badge: "Classic route", shortTitle: "Ephesus & Artemis",
+    title: "Ephesus & Temple of Artemis Private Tour from Kusadasi Port", duration: "3-4 hours", origin: "Kusadasi Cruise Port", price: 170,
+    image: "/images/ephesus-detail-10.webp", summary: "A focused private visit to ancient Ephesus and the remains of the Temple of Artemis.",
+    highlights: ["Ephesus Ancient City", "Temple of Artemis", "Library of Celsus", "Grand Theatre", "Short-call friendly"],
+  },
+  {
+    slug: "ephesus-marys-house-optional-tickets", badge: "Flexible tickets", shortTitle: "Ephesus & Mary Flexible",
+    title: "Ephesus & Mary's House with Optional Entry Tickets", duration: "4-7 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-detail-6.webp", summary: "Keep the core private service simple and choose which admissions to add before the day.",
+    highlights: ["Ephesus Ancient City", "House of the Virgin Mary", "Optional Terrace Houses", "Clear ticket choices", "Flexible duration"], includedExtras: ["Optional tickets arranged at official prices"],
+  },
+  {
+    slug: "ephesus-virgin-mary-private-group-option", badge: "Private or small group", shortTitle: "Ephesus & Mary Group Choice",
+    title: "Ephesus & Virgin Mary Tour with Private or Small-Group Option", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 95,
+    image: "/images/ephesus-private-hero-v2.webp", summary: "Choose a fully private vehicle or a carefully limited small group for the same essential route.",
+    highlights: ["Private or small-group format", "Ephesus Ancient City", "House of the Virgin Mary", "Port transfers", "On-time return"], includedExtras: ["Selected private or small-group service"],
+    serviceIncluded: ["Licensed professional tour guide", "Air-conditioned vehicle with driver", "Port pick-up and drop-off", "Planned on-time return to your ship", "All local taxes, parking fees and fuel"],
+  },
+  {
+    slug: "ephesus-marys-house-no-hidden-fees", badge: "No hidden fees", shortTitle: "Clear-Price Ephesus & Mary",
+    title: "No-Hidden-Fees Ephesus & Mary's House Guided Tour", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 280,
+    image: "/images/ephesus-biblical-v2.webp", summary: "A clearly itemized guided package with the selected admissions and transport confirmed before departure.",
+    highlights: ["Upfront inclusions", "Ephesus Ancient City", "House of the Virgin Mary", "Private or group choice", "No compulsory shopping"], includedExtras: ["Ephesus and Mary's House entry tickets", "No compulsory shopping stops"],
+  },
+  {
+    slug: "customizable-private-guided-ephesus", badge: "Build your day", shortTitle: "Custom Ephesus",
+    title: "Customizable Private Guided Ephesus Tour", duration: "4-6 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-crafts-v2.webp", summary: "Choose the ruins, sacred sites, food and artisan stops that matter to you; we shape the timing around your ship.",
+    highlights: ["Your choice of Ephesus-area sites", "Flexible start and pace", "Optional food or craft stops", "Private guide and vehicle", "Ship-safe return"],
+  },
+  {
+    slug: "no-shopping-ephesus-tour", badge: "No shopping", shortTitle: "Nothing but Ephesus",
+    title: "No-Shopping Ephesus Tour - 100% Sightseeing", duration: "5-6 hours", origin: "Kusadasi Cruise Port", price: 360,
+    image: "/images/ephesus-detail-10.webp", summary: "Zero showrooms and zero sales pressure. Every minute ashore belongs to the ancient sites and your questions.",
+    highlights: ["Written zero-shopping guarantee", "Ephesus and Terrace Houses", "Virgin Mary or St. John - your choice", "Extra time at the ruins", "On-time return to ship"], includedExtras: ["Commission-free, no-shopping itinerary"],
+  },
+  {
+    slug: "ephesus-wine-tasting-private-tour", badge: "Food & wine", shortTitle: "History & Aegean Wine",
+    title: "Ephesus & Wine Tasting with Local Snacks", duration: "5-6 hours", origin: "Kusadasi Cruise Port", price: 250,
+    image: "/images/ephesus-wine-v2.webp", summary: "Two thousand years of history followed by regional wines, local flavors and Aegean hospitality.",
+    highlights: ["Private guided Ephesus walk", "Regional wine tasting", "Local snacks", "Family winery", "Panoramic Kusadasi drive"], includedExtras: ["Wine tasting with local snacks"],
+  },
+  {
+    slug: "ephesus-and-shopping-private-tour", badge: "Culture & crafts", shortTitle: "Ephesus & Artisans",
+    title: "Ephesus & Turkish Handicrafts - Rugs, Ceramics, Leather", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-crafts-v2.webp", summary: "Ancient Ephesus followed by the region's living traditions of weaving, ceramics and leather craft.",
+    highlights: ["Ephesus and Terrace Houses", "Artisan workshops", "Rugs, ceramics or leather", "No obligation to purchase", "On-time ship return"], includedExtras: ["Your choice of artisan workshop visits"],
+  },
+  {
+    slug: "ephesus-pottery-class-private-tour", badge: "Family favorite", shortTitle: "Ephesus & Pottery",
+    title: "Ephesus & Hands-On Pottery Class", duration: "4-5 hours", origin: "Kusadasi Cruise Port", price: 180,
+    image: "/images/ephesus-pottery-v2.webp", summary: "Explore Ephesus, then shape your own pottery with a master artisan - a tactile day for every generation.",
+    highlights: ["Guided Ephesus visit", "Hands-on pottery class", "Master artisan", "Coffee or tea welcome", "Ideal for families"], includedExtras: ["Pottery class with a master artisan", "Welcome coffee, tea or water"],
+  },
+  {
+    slug: "istanbul-old-city-private-tour-galataport", badge: "Istanbul", shortTitle: "Istanbul Old City",
+    title: "Private Istanbul Old City Tour - From Galataport", duration: "6-7 hours", origin: "Galataport, Istanbul", price: 400,
+    image: "/images/istanbul-private-v2.webp", summary: "Hagia Sophia, Topkapi Palace, Blue Mosque and Hippodrome with a private licensed guide.",
+    highlights: ["Hagia Sophia", "Topkapi Palace", "Blue Mosque", "Roman Hippodrome", "Galataport meet and return"], includedExtras: ["Sultanahmet walking tour and tram experience"],
   },
 ];
 
-export function getTour(slug: string) { return tours.find((tour) => tour.slug === slug); }
+export const tours: Tour[] = seeds.map(createTour);
+
+const tourAliases: Record<string, string> = {
+  "private-ephesus-tour-skip-the-line": "cruisers-skip-lines-on-time-return",
+  "best-of-ephesus-private-tour": "ephesus-house-virgin-mary-cruisers",
+  "biblical-ephesus-private-tour": "private-biblical-ephesus-lunch",
+  "half-day-private-ephesus-tour": "private-ephesus-cruisers-tickets-included",
+  "ephesus-tour-from-izmir-port": "ephesus-virgin-mary-izmir-all-inclusive",
+};
+
+export const tourSlugs = [...tours.map(({ slug }) => slug), ...Object.keys(tourAliases)];
+
+export function getTour(slug: string) {
+  const resolvedSlug = tourAliases[slug] ?? slug;
+  return tours.find((tour) => tour.slug === resolvedSlug);
+}
